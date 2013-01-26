@@ -167,3 +167,54 @@ class EventProfiler():
             plt.ylabel('Cumulative Abnormal Returns')
             plt.draw()
             savefig(filename,format='pdf')
+
+
+
+class SQLEventProfiler(EventProfiler):
+	def __init__(self, eventMatrix, startday, endday, session, modelClass, dateSource = "TWSE",\
+            lookback_days = 20, lookforward_days =20,\
+            verbose=False,):
+
+	    """ Event Profiler class construtor for SQLAlchemy data sources
+		Parameters : evenMatrix
+			   : startday
+			   : endday
+                           : session
+                           : modelClass
+                           : dateSource
+		(optional) : lookback_days ( default = 20)
+		(optional) : lookforward_days( default = 20)
+
+		eventMatrix is a pandas DataMatrix
+		eventMatrix must have the following structure:
+		    |IBM |GOOG|XOM |MSFT| GS | JP |
+		(d1)|nan |nan | 1  |nan |nan | 1  |
+		(d2)|nan | 1  |nan |nan |nan |nan |
+		(d3)| 1  |nan | 1  |nan | 1  |nan |
+		(d4)|nan |  1 |nan | 1  |nan |nan |
+		...................................
+		...................................
+		Also, d1 = start date
+		nan = no information about any event.
+		 = status bit(positively confirms the event occurence)
+	    """
+
+	    self.eventMatrix = eventMatrix
+	    self.startday = startday
+	    self.endday = endday
+	    self.symbols = eventMatrix.columns
+	    self.lookback_days = lookback_days
+	    self.lookforward_days = lookforward_days
+	    self.total_days = lookback_days + lookforward_days + 1
+	    self.dataobj = da.DataAccess('SQLAlchemy', session = session, modelClass = modelClass)
+            if dateSource == "TWSE":
+        	self.timestamps = du.getTWSEdays(startday,endday)
+            else:
+        	self.timestamps = du.getNYSEdays(startday,endday)
+            self.verbose = verbose
+            if verbose:
+                print __name__ + " reading historical data"
+	    self.close = self.dataobj.get_data(self.timestamps,\
+                self.symbols, "close", verbose=self.verbose)
+	    self.close = (self.close.fillna()).fillna(method='backfill')
+
