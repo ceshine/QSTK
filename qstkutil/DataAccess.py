@@ -29,6 +29,7 @@ class Exchange (object):
     OTC=4
     DELISTED=5
     NASDAQ=6
+    TWSE=7
     
 class DataItem (object):
     OPEN="open"
@@ -50,6 +51,7 @@ class DataSource(object):
     COMPUSTAT="Compustat"
     CUSTOM="Custom"    
     MLT = "ML4Trading"
+    SQLALCHEMY = "SQLAlchemy"
     #class DataSource ends
 
 class DataAccess(object):
@@ -58,7 +60,7 @@ class DataAccess(object):
     and returns that object. The {main} function currently demonstrates use.
     @note: The earliest time for which this works is platform dependent because the python date functionality is platform dependent.
     '''
-    def __init__(self, sourcein = DataSource.NORGATE):
+    def __init__(self, sourcein = DataSource.NORGATE, session = None, modelClass=None):
         '''
         @param sourcestr: Specifies the source of the data. Initializes paths based on source.
         @note: No data is actually read in the constructor. Only paths for the source are initialized
@@ -130,10 +132,75 @@ class DataAccess(object):
                                     
                 
             #if DataSource.Compustat ends
+        elif (sourcein == DataSource.SQLALCHEMY):
+            self.source = DataSource.SQLALCHEMY
+            self.folderList.append(self.rootdir+"/SQLAlchemy/")   
+            if not (session and modelClass):
+                raise ValueError("Please provide SQLAlchemy Session and ModelClass")
+            self.session = session
+            self.modelClass = modelClass
+            
+
         else:
             raise ValueError("Incorrect data source requested.")        
             
         #__init__ ends
+
+    def get_data_sqlalchemy(self, ts_list, symbol_list, data_item, verbose=False, bIncDelist=False):
+        '''
+        Read data into a DataFrame from a SQLAlchemy Data Model.
+        @param ts_list: List of timestamps for which the data values are needed. Timestamps must be sorted.
+        @param symbol_list: The list of symbols for which the data values are needed
+        @param data_item: The data_item needed. Like open, close, volume etc.  May be a list, in which case a list of DataFrame is returned.
+        @param bIncDelist: If true, delisted securities will be included.
+        '''
+        
+        # init sqlalchemy varialbes
+        session = self.session
+        modelClass = self.modelClass
+
+
+        # init data struct - list of arrays, each member is an array corresponding do a different data type
+        # arrays contain n rows for the timestamps and m columns for each stock
+        all_stocks_data = np.zeros((len(ts_list), len(symbol_list)));
+        all_stocks_data[:][:] = np.NAN
+        
+
+        #read in data for a stock
+        symbol_ctr=-1
+        for symbol in symbol_list:
+            symbol_ctr = symbol_ctr + 1
+            #print self.getPathOfFile(symbol)
+            try:
+                data =  session.query(modelClass).filter_by(symbol = symbol).filter(modelClass.date <= (ts_list[-1]).date()).filter(modelClass.date >= (ts_list[0]).date()).order_by(modelClass.date).all()
+            
+            except Exception as e:
+                # If unable to read then continue. The value for this stock will be nan
+                print e
+                continue;
+            ts_ctr = 0
+            for timestamp in ts_list:
+                if (data[-1].date < timestamp.date()):
+                    #The timestamp is after the last timestamp for which we have data. So we give up. Note that we don't have to fill in NaNs because that is 
+                    #the default value.
+                    break;
+                else:
+                    while ((ts_ctr < len(data)) and (data[ts_ctr].date < timestamp.date())):
+                        ts_ctr = ts_ctr + 1
+                
+                if (timestamp.date() == data[ts_ctr].date):
+                    if data_item == DataItem.OPEN:
+                        entry = data[ts_ctr].Open
+                    elif data_item == DataItem.CLOSE:
+                        entry = data[ts_ctr].Close
+                    else:
+                        raise ValueError("Incorrect value for data_item")
+
+                    all_stocks_data[ts_list.index(timestamp)][symbol_ctr] = entry
+                    ts_ctr = ts_ctr + 1
+
+        return pa.DataFrame( all_stocks_data, ts_list, symbol_list) 
+
 
     def get_data_hardread(self, ts_list, symbol_list, data_item, verbose=False, bIncDelist=False):
         '''
@@ -501,8 +568,11 @@ class DataAccess(object):
             if verbose:
                 print "data_item(s): " + str(data_item)
                 print "symbols to read: " + str(symbol_list)
-            retval = self.get_data_hardread(ts_list, 
-                symbol_list, data_item, verbose, bIncDelist)
+            if self.source == DataSource.SQLALCHEMY:
+                retval = self.get_data_sqlalchemy(ts_list, symbol_list, data_item, verbose, bIncDelist)
+            else:
+                retval = self.get_data_hardread(ts_list, 
+                    symbol_list, data_item, verbose, bIncDelist)
             elapsed = time.time() - start # end timer
             if verbose:
                 print "end hardread"
