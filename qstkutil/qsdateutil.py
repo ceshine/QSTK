@@ -22,10 +22,10 @@ import os
 import pandas as pd
 
 
-def _cache_dates():
+def _cache_dates(path = "/qstkutil/NYSE_dates.txt"):
     ''' Caches dates '''
     try:
-        filename = os.environ['QS'] + "/qstkutil/NYSE_dates.txt"
+        filename = os.environ['QS'] + path
     except KeyError:
         print "Please be sure to set the value for QS in config.sh or\n"
         print "in local.sh and then \'source local.sh\'.\n"
@@ -37,8 +37,7 @@ def _cache_dates():
     return pd.TimeSeries(index=dates, data=dates)
 
 GTS_DATES = _cache_dates()
-
-
+TW_DATES = _cache_dates("/qstkutil/TWSE_dates.txt")
 
 def getMonthNames():
     return(['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'])
@@ -152,6 +151,27 @@ def getNYSEdays(startday = dt.datetime(1964,7,5), endday = dt.datetime(2020,12,3
     end = endday - timeofday
 
     dates = GTS_DATES[start:end]
+
+    ret = [x + timeofday for x in dates]
+
+    return(ret)
+
+def getTWSEdays(startday = dt.datetime(1964,7,5), endday = dt.datetime(2020,12,31),
+    timeofday = dt.timedelta(0)):
+    """
+    @summary: Create a list of timestamps between startday and endday (inclusive)
+    that correspond to the days there was trading at the TWSE. This function
+    depends on a separately created a file that lists all days since Jan 02, 2006.
+
+    @param startday: First timestamp to consider (inclusive)
+    @param endday: Last day to consider (inclusive)
+    @return list: of timestamps between startday and endday on which NYSE traded
+    @rtype datetime
+    """
+    start = startday - timeofday
+    end = endday - timeofday
+
+    dates = TW_DATES[start:end]
 
     ret = [x + timeofday for x in dates]
 
