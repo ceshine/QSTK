@@ -193,6 +193,10 @@ class DataAccess(object):
                         entry = data[ts_ctr].Open
                     elif data_item == DataItem.CLOSE:
                         entry = data[ts_ctr].Close
+                    elif data_item == DataItem.HIGH:
+                        entry = data[ts_ctr].High
+                    elif data_item == DataItem.LOW:
+                        entry = data[ts_ctr].Low
                     else:
                         raise ValueError("Incorrect value for data_item")
 
