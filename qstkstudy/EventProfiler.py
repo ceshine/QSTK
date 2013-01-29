@@ -155,7 +155,7 @@ class EventProfiler():
             plt.plot(studyrange,studystat,color='#0000FF',linewidth=3,\
                 label='mean')
             # set the limits of the axes to appropriate ranges
-            plt.ylim(min(min(studystat),0.5),max(max(studystat),1.2))
+            plt.ylim(min(min(studystat),0.5),max(max(studystat),1.4))
             plt.xlim(min(studyrange)-1,max(studyrange)+1)
             # draw titles and axes
             if plotMarketNeutral:
