@@ -189,15 +189,18 @@ class DataAccess(object):
                         ts_ctr = ts_ctr + 1
                 
                 if (timestamp.date() == data[ts_ctr].date):
-                    if data_item == DataItem.OPEN:
-                        entry = data[ts_ctr].Open
-                    elif data_item == DataItem.CLOSE:
-                        entry = data[ts_ctr].Close
-                    elif data_item == DataItem.HIGH:
-                        entry = data[ts_ctr].High
-                    elif data_item == DataItem.LOW:
-                        entry = data[ts_ctr].Low
-                    else:
+                    #if data_item == DataItem.OPEN:
+                    #    entry = data[ts_ctr].Open
+                    #elif data_item == DataItem.CLOSE:
+                    #    entry = data[ts_ctr].Close
+                    #elif data_item == DataItem.HIGH:
+                    #    entry = data[ts_ctr].High
+                    #elif data_item == DataItem.LOW:
+                    #    entry = data[ts_ctr].Low
+                    data_item = data_item[0].upper() + data_item[1:]
+                    try:
+                        entry = getattr(data[ts_ctr], data_item)
+                    except AttributeError:
                         raise ValueError("Incorrect value for data_item")
 
                     all_stocks_data[ts_list.index(timestamp)][symbol_ctr] = entry
