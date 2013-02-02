@@ -523,7 +523,11 @@ class DataAccess(object):
         #spyfile=os.environ['QSDATA'] + '/Processed/Norgate/Stocks/US/NYSE Arca/SPY.pkl'
         for i in ts_list:
             hashts = (hashts + hash(i)) % 10000000
-        hashstr = 'qstk-' + str (self.source)+'-' +str(abs(hashsyms)) + '-' + str(abs(hashts)) \
+        if self.modelClass:
+            hashstr = 'qstk-' + str (self.source)+'-' +str(abs(hashsyms)) + '-' + str(abs(hashts)) \
+            + '-' + str(hash(str(data_item))) + '-' + str(hash(self.modelClass.__tablename__))#+ '-' + str(hash(str(os.path.getctime(spyfile))))
+        else:
+            hashstr = 'qstk-' + str (self.source)+'-' +str(abs(hashsyms)) + '-' + str(abs(hashts)) \
             + '-' + str(hash(str(data_item)))#+ '-' + str(hash(str(os.path.getctime(spyfile))))
 
         # get the directory for scratch files from environment
